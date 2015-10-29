@@ -87,29 +87,35 @@ void loop()
           {
             // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
             // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK");
+            client.println("HTTP/1.1 200 OK ");
             client.println("Content-type:text/html");
             client.println();
             
-            // the content of the HTTP response follows the header:
-            
-            client.println("<html><head><title>Laser Robot Control</title></head><body align=center>");
-            client.println("<h1 align=center><font color=\"red\">Laser MicroRobot WiFi Test</font></h1>");
-            
-           
-            client.println("<p align=center><font size =\"5 px\"><font color=\"blue\">Servo Control</font></p>");
-            
-            client.println("<b1 style=\"margin-left: 4px\"><button onclick=\"location.href='/U'\">UP</button></b1><br><br>");
-            client.print("<button onclick=\"location.href='/L'\">LEFT</button>");
-            client.print("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/S'\">STOP</button>");
-         
-            client.println("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/R'\">RIGHT</button></b1><br><br>");
-            client.println("<b1 style=\"margin-left: 3px\"><button onclick=\"location.href='/D'\">DOWN</b1></button>");
-            
-            client.println();            
+//            // the content of the HTTP response follows the header:
+//            
+              client.println("<html><head><title>LASER</title></head><body>LAB</body></html>");
+//            client.println("<h1 align=center><font color=\"red\">Laser MicroRobot WiFi Test</font></h1>");
+//            
+
+
+
+
+//           
+//            client.println("<p align=center><font size =\"5 px\"><font color=\"blue\">Servo Control</font></p>");
+//            
+//            client.println("<b1 style=\"margin-left: 4px\"><button onclick=\"location.href='/U'\">UP</button></b1><br><br>");
+//            client.print("<button onclick=\"location.href='/L'\">LEFT</button>");
+//            client.print("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/S'\">STOP</button>");
+//         
+//            client.println("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/R'\">RIGHT</button></b1><br><br>");
+//            client.println("<b1 style=\"margin-left: 3px\"><button onclick=\"location.href='/D'\">DOWN</b1></button>");
+//            
+//            client.println();            
             
             // The HTTP response ends with another blank line:
             client.println();
+            client.println();
+  
             // break out of the while loop:
             break;
           }
@@ -200,8 +206,8 @@ void turnLeft()
   start();
   leftDrive.write(0);
   rightDrive.write(0);
-  delay(600);
-  stop();
+//  delay(600);
+//  stop();
 }
 
 //turns right about 90 degrees
@@ -210,19 +216,19 @@ void turnRight()
   start();
   leftDrive.write(180);
   rightDrive.write(180);
-  delay(600);
-  stop();
+//  delay(600);
+ // stop();
 }
 
 
 //turns left about 90 degrees
 void stop()
 {
-  //leftDrive.detach();
-  //rightDrive.detach();
+  leftDrive.detach();
+  rightDrive.detach();
   
-  leftDrive.write(90);
-  rightDrive.write(90);
+  //leftDrive.write(90);
+  //rightDrive.write(90);
 }
 
 
