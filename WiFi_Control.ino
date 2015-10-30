@@ -34,42 +34,165 @@ unsigned int ret;
 #define leftLED 9
 #define rightLED 12  
 #define downLED 13
-//#define SERVICE_NAME "AAA._uart._tcp.local"
+
+
+#define HOME_AP "Tiensoon"
+#define HOME_PW "0000000000"
+#define PHONE_AP "Tien Long"
+#define PHONE_PW "bendanben"
+#define NUS_AP "NUS"
 
 void wifi_Setup()
 {
+    int networkAvailable = 0;
     Serial.begin(115200);
     //int status = WL_IDLE_STATUS; // Init WiFi as Idle state (not connected to network)
+    WiFi.init(); // initialise WiFi
+   
+    networkAvailable = scanNetwork();
     
-    
-    char ssid[] = "Laser Robot";  // Network name for WiFi AP
-    char password[] = "00000000"; // Password for WiFi AP
-    IPAddress homeIP(192, 168, 1, 1); // IP address for home page
+    // Attempt to connect to specified network
+    if (connectNetwork(networkAvailable) == 0)
+    {
+        // unable to find the specified network
+        ap_Setup(); // Setup own access point.
+    } 
   
-  
-    WiFi.config(homeIP);
-    WiFi.beginNetwork(ssid, password);  // Start WiFi in AP mode with WPA network
-
-    while (WiFi.localIP() == INADDR_NONE); // wait for IP address to setup
+    //connect_Phone_AP();    
     
     server.begin();                           // start the web server at port (80)
 
-    Serial.print("Ip is :");
-    Serial.println(WiFi.localIP());
-    
-    
 }
 
+// return numbers of network available
+int scanNetwork()
+{
+    return WiFi.scanNetworks();
+}
+
+// return 1 if connected to network, 0 if unable to find suitable network to connect
+char connectNetwork(int networkAvailable)
+{
+   for (int network = 0; network < networkAvailable; network++)
+   {
+       if(strstr(WiFi.SSID(network),  PHONE_AP))
+       {
+           connect_AP(WiFi.SSID(network), PHONE_PW);
+           return 1;
+       }
+       
+       if(strstr(WiFi.SSID(network),  HOME_AP))
+       {
+          connect_AP(WiFi.SSID(network), HOME_PW);
+          return 1;
+       }
+       
+       /*
+       if(strstr(WiFi.SSID(network),  NUS_AP))
+       {
+          connect_AP(WiFi.SSID(network), NUS_PW);
+          return 1;
+       }
+       */
+   }
+   
+   return 0;
+}
+
+
+// setup redbear as access point for others to connect.
+void ap_Setup()
+{
+    char ssid[] = "Laser Robot";  // Network name for WiFi AP
+    char password[] = "00000000"; // Password for WiFi AP
+    
+    IPAddress homeIP(192, 168, 1, 1); // IP address for home page
+    WiFi.config(homeIP);
+
+    WiFi.beginNetwork(ssid, password);  // Start WiFi in (AP mode) with WPA network 
+    
+    Serial.println("Waiting for an ip address");
+  
+    while (WiFi.localIP() == INADDR_NONE) {
+    // print dots while we wait for an ip addresss
+    Serial.print(".");
+    delay(300);
+    }  
+  
+    printWiFiStatus();
+  
+}
+
+
+void connect_Home_AP()
+{
+    char ext_ssid[] = "Tiensoon";
+    char ext_password[] = "0000000000"; // Password for WiFi AP
+    
+    connect_AP(ext_ssid, ext_password);
+}
+
+// Connect to home access point.
+void connect_AP(char* ext_ssid, char* ext_password) 
+{
+     WiFi.begin(ext_ssid, ext_password); // connect to external AP
+    
+    // attempt to connect to Wifi network:
+    Serial.print("Attempting to connect to Network named: ");
+    // print the network name (SSID);
+    Serial.println(ext_ssid); 
+    
+    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
+    WiFi.begin(ext_ssid, ext_password);
+    
+    while ( WiFi.status() != WL_CONNECTED) {
+    // print dots while we wait to connect
+    Serial.print(".");
+    delay(300);
+    }
+    
+    Serial.println("\nYou're connected to the network");
+    Serial.println("Waiting for an ip address");
+  
+    while (WiFi.localIP() == INADDR_NONE) {
+    // print dots while we wait for an ip addresss
+    Serial.print(".");
+    delay(300);
+    }  
+    
+    printWiFiStatus();
+}
+
+void printWiFiStatus()
+{
+    Serial.println("\n\n----- WiFi Status -----");
+    
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+
+    // print your WiFi IP address:
+    IPAddress ip = WiFi.localIP();
+    Serial.print("IP Address: ");
+    Serial.println(ip);
+
+    // print the received signal strength:
+    long rssi = WiFi.RSSI();
+    Serial.print("signal strength (RSSI):");
+    Serial.print(rssi);
+    Serial.println(" dBm");
+}
+
+
+// setup mDNS (multicast DNS) to advertise 
 void mDNS_Setup()
 {
-    // setup mdns service 
-    
+    // setup mdns service    
     int retVal = 0;
    
-    const signed char serviceName[] = "Robot._http._tcp.local"	;
-    unsigned char nameLen = 23;
-    const signed char serviceText[] = "NA"	;
-    unsigned char textLen = 3;
+    const signed char serviceName[] = "laser-robot._http._tcp.local"	;
+    unsigned char nameLen = 29;
+    const signed char serviceText[] = "project=FYP"	;
+    unsigned char textLen = 12;
     uint16_t port = 80;  // HTTP Port
     uint32_t TTL = 1800; // Update every 30 min
     uint32_t OPTION = 0x01; // Service should be unique.
@@ -84,9 +207,10 @@ void mDNS_Setup()
     retVal = sl_NetAppMDNSRegisterService(serviceName, nameLen, serviceText, textLen, port, TTL, OPTION);
   
     Serial.print("ret value is :");
-    Serial.println(retVal);
-    
+    Serial.println(retVal);   
 }
+
+
 void setup() 
 {
   
