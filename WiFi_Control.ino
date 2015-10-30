@@ -103,15 +103,13 @@ char connectNetwork(int networkAvailable)
 // setup redbear as access point for others to connect.
 void ap_Setup()
 {
-    char ssid[] = "Laser Robot";  // Network name for WiFi AP
-    char password[] = "00000000"; // Password for WiFi AP
+    char int_ssid[] = "Laser Robot";  // Network name for WiFi AP
+    char int_password[] = "00000000"; // Password for WiFi AP
     
-    IPAddress homeIP(192, 168, 1, 1); // IP address for home page
-    WiFi.config(homeIP);
-
-    WiFi.beginNetwork(ssid, password);  // Start WiFi in (AP mode) with WPA network 
+   
+    WiFi.beginNetwork(int_ssid, int_password);  // Start WiFi in (AP mode) with WPA network 
     
-    Serial.println("Waiting for an ip address");
+    Serial.println("\n\nSeting up redbear as access point");
   
     while (WiFi.localIP() == INADDR_NONE) {
     // print dots while we wait for an ip addresss
@@ -138,7 +136,7 @@ void connect_AP(char* ext_ssid, char* ext_password)
      WiFi.begin(ext_ssid, ext_password); // connect to external AP
     
     // attempt to connect to Wifi network:
-    Serial.print("Attempting to connect to Network named: ");
+    Serial.print("\n\nAttempting to connect to Network named: ");
     // print the network name (SSID);
     Serial.println(ext_ssid); 
     
