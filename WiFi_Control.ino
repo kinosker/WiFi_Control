@@ -1,11 +1,9 @@
-
-
 /*
  
  WiFi Web Server for Servo Control
- WiFi name   : RedBearLab CC3200
+ AP name     : Laser Lab / defined
  Webpage     : IP address of Redbear
- Password     : 00000000
+ Password    : 00000000
 */
 
 #ifndef __CC3200R1M1RGC__
@@ -18,14 +16,6 @@
 //#include "utility/simplelink.h"
 
 
-WiFiServer server(80); // port 80..
-
-Servo leftDrive;  // create servo object to control a servo
-Servo rightDrive; //another servo object for the left side
-
-
-unsigned int n;
-unsigned int ret;
 
 
 #define rightServo 6
@@ -35,12 +25,25 @@ unsigned int ret;
 #define rightLED 12  
 #define downLED 13
 
-
 #define HOME_AP "Tiensoon"
 #define HOME_PW "0000000000"
 #define PHONE_AP "Tien Long"
 #define PHONE_PW "bendanben"
 #define NUS_AP "NUS"
+#define PORT 80
+
+
+
+
+WiFiServer server(PORT); // port 80..
+
+Servo leftDrive;  // create servo object to control a servo
+Servo rightDrive; //another servo object for the left side
+
+
+unsigned int n;
+unsigned int ret;
+
 
 void wifi_Setup()
 {
@@ -57,8 +60,6 @@ void wifi_Setup()
         // unable to find the specified network
         ap_Setup(); // Setup own access point.
     } 
-  
-    //connect_Phone_AP();    
     
     server.begin();                           // start the web server at port (80)
 
@@ -191,7 +192,7 @@ void mDNS_Setup()
     unsigned char nameLen = 29;
     const signed char serviceText[] = "project=FYP"	;
     unsigned char textLen = 12;
-    uint16_t port = 80;  // HTTP Port
+    uint16_t port = PORT;  // HTTP Port
     uint32_t TTL = 1800; // Update every 30 min
     uint32_t OPTION = 0x01; // Service should be unique.
    
@@ -215,25 +216,9 @@ void setup()
     wifi_Setup();
     mDNS_Setup();
     
-    pinMode(upLED, OUTPUT);      // set the LED pin mode
-    pinMode(downLED, OUTPUT);      // set the LED pin mode
-    pinMode(leftLED, OUTPUT);      // set the LED pin mode
-    pinMode(rightLED, OUTPUT);      // set the LED pin mode
-
-    digitalWrite(upLED, LOW);  
-    digitalWrite(rightLED, LOW);
-    digitalWrite(leftLED, LOW);
-    digitalWrite(downLED, LOW);
-    
-    pinMode(leftServo, OUTPUT);      // set the LED pin mode
-    pinMode(rightServo, OUTPUT);      // set the LED pin mode
-    digitalWrite(leftServo, LOW);
-    digitalWrite(rightServo, LOW);
-    
-    //start();
     stop(); // stop from moving
-
 }
+
 
 void loop()
 {
@@ -258,29 +243,26 @@ void loop()
             client.println("HTTP/1.1 200 OK ");
             client.println("Content-type:text/html");
             client.println();
+                        
+//          client.println("<html><head><title>LASER</title></head><body>LAB</body></html>");
+
+            client.println("<html><head><title>Laser Robot Control</title></head><body align=center>");
+            client.println("<h1 align=center><font color=\"red\">Laser MicroRobot WiFi Test</font></h1>");
             
-//            // the content of the HTTP response follows the header:
-//            
-              client.println("<html><head><title>LASER</title></head><body>LAB</body></html>");
-//            client.println("<h1 align=center><font color=\"red\">Laser MicroRobot WiFi Test</font></h1>");
-//            
-
-
-
-
-//           
-//            client.println("<p align=center><font size =\"5 px\"><font color=\"blue\">Servo Control</font></p>");
-//            
-//            client.println("<b1 style=\"margin-left: 4px\"><button onclick=\"location.href='/U'\">UP</button></b1><br><br>");
-//            client.print("<button onclick=\"location.href='/L'\">LEFT</button>");
-//            client.print("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/S'\">STOP</button>");
-//         
-//            client.println("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/R'\">RIGHT</button></b1><br><br>");
-//            client.println("<b1 style=\"margin-left: 3px\"><button onclick=\"location.href='/D'\">DOWN</b1></button>");
-//            
-//            client.println();            
+           
+            client.println("<p align=center><font size =\"5 px\"><font color=\"blue\">Servo Control</font></p>");
             
-            // The HTTP response ends with another blank line:
+            client.println("<b1 style=\"margin-left: 4px\"><button onclick=\"location.href='/U'\">UP</button></b1><br><br>");
+            client.print("<button onclick=\"location.href='/L'\">LEFT</button>");
+            client.print("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/S'\">STOP</button>");
+         
+            client.println("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/R'\">RIGHT</button></b1><br><br>");
+            client.println("<b1 style=\"margin-left: 3px\"><button onclick=\"location.href='/D'\">DOWN</b1></button>");
+            
+
+
+            
+            // The HTTP response ends with 2 blank line:
             client.println();
             client.println();
   
@@ -301,34 +283,18 @@ void loop()
         // Check to see client request
         if (endsWith(buffer, "GET /U")) 
         {  
-          digitalWrite(upLED, HIGH);
-          digitalWrite(rightLED, LOW);
-          digitalWrite(leftLED, LOW);
-          digitalWrite(downLED, LOW);
           driveForward();
         }
         if (endsWith(buffer, "GET /D")) 
         {  
-          digitalWrite(upLED, LOW);
-          digitalWrite(rightLED, LOW);
-          digitalWrite(leftLED, LOW);
-          digitalWrite(downLED, HIGH);
           driveBackward();
         }
         if (endsWith(buffer, "GET /L"))
         {  
-          digitalWrite(upLED, LOW);
-          digitalWrite(rightLED, LOW);
-          digitalWrite(leftLED, HIGH);
-          digitalWrite(downLED, LOW);
           turnLeft();
         }
         if (endsWith(buffer, "GET /R")) 
         {  
-          digitalWrite(upLED, LOW);
-          digitalWrite(rightLED, HIGH);
-          digitalWrite(leftLED, LOW);
-          digitalWrite(downLED, LOW);
           turnRight();
         }
         if (endsWith(buffer, "GET /S")) 
@@ -374,8 +340,6 @@ void turnLeft()
   start();
   leftDrive.write(0);
   rightDrive.write(0);
-//  delay(600);
-//  stop();
 }
 
 //turns right about 90 degrees
@@ -384,8 +348,6 @@ void turnRight()
   start();
   leftDrive.write(180);
   rightDrive.write(180);
-//  delay(600);
- // stop();
 }
 
 
@@ -394,9 +356,6 @@ void stop()
 {
   leftDrive.detach();
   rightDrive.detach();
-  
-  //leftDrive.write(90);
-  //rightDrive.write(90);
 }
 
 
