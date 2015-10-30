@@ -1,4 +1,4 @@
-#include <Servo.h>
+
 
 /*
  
@@ -13,13 +13,10 @@
 #include <SPI.h>
 #endif
 #include <WiFi.h>
+#include <Servo.h>
+//#include <IPAddress.h>
+//#include "utility/simplelink.h"
 
-// your network name also called SSID
-char ssid[] = "RedBearLab CC3200";
-// your network password
-char password[] = "00000000";
-// your network key Index number (needed only for WEP)
-//int keyIndex = 0;
 
 WiFiServer server(80); // port 80..
 
@@ -37,15 +34,64 @@ unsigned int ret;
 #define leftLED 9
 #define rightLED 12  
 #define downLED 13
+//#define SERVICE_NAME "AAA._uart._tcp.local"
 
-
-void setup() 
+void wifi_Setup()
 {
-    WiFi.beginNetwork(ssid, password);
+    Serial.begin(115200);
+    //int status = WL_IDLE_STATUS; // Init WiFi as Idle state (not connected to network)
+    
+    
+    char ssid[] = "Laser Robot";  // Network name for WiFi AP
+    char password[] = "00000000"; // Password for WiFi AP
+    IPAddress homeIP(192, 168, 1, 1); // IP address for home page
+  
+  
+    WiFi.config(homeIP);
+    WiFi.beginNetwork(ssid, password);  // Start WiFi in AP mode with WPA network
 
     while (WiFi.localIP() == INADDR_NONE); // wait for IP address to setup
-  
+    
     server.begin();                           // start the web server at port (80)
+
+    Serial.print("Ip is :");
+    Serial.println(WiFi.localIP());
+    
+    
+}
+
+void mDNS_Setup()
+{
+    // setup mdns service 
+    
+    int retVal = 0;
+   
+    const signed char serviceName[] = "Robot._http._tcp.local"	;
+    unsigned char nameLen = 23;
+    const signed char serviceText[] = "NA"	;
+    unsigned char textLen = 3;
+    uint16_t port = 80;  // HTTP Port
+    uint32_t TTL = 1800; // Update every 30 min
+    uint32_t OPTION = 0x01; // Service should be unique.
+   
+    
+    retVal = sl_NetAppStart(SL_NET_APP_MDNS_ID);
+    
+    Serial.print("ret value is :");
+    Serial.println(retVal);
+    
+    sl_NetAppMDNSUnRegisterService(serviceName, nameLen);                
+    retVal = sl_NetAppMDNSRegisterService(serviceName, nameLen, serviceText, textLen, port, TTL, OPTION);
+  
+    Serial.print("ret value is :");
+    Serial.println(retVal);
+    
+}
+void setup() 
+{
+  
+    wifi_Setup();
+    mDNS_Setup();
     
     pinMode(upLED, OUTPUT);      // set the LED pin mode
     pinMode(downLED, OUTPUT);      // set the LED pin mode
