@@ -13,7 +13,7 @@
 #include <WiFi.h>
 #include <Servo.h>
 //#include <IPAddress.h>
-//#include "utility/simplelink.h"
+#include "utility/simplelink.h"
 
 
 
@@ -27,6 +27,8 @@
 
 #define HOME_AP "Tiensoon"
 #define HOME_PW "0000000000"
+#define JX_AP  "Winnie_2G"
+#define JX_PW "tiantiankaixin"
 #define PHONE_AP "Tien Long"
 #define PHONE_PW "bendanben"
 #define NUS_AP "NUS"
@@ -43,6 +45,7 @@ Servo rightDrive; //another servo object for the left side
 
 unsigned int n;
 unsigned int ret;
+
 
 
 void wifi_Setup()
@@ -87,6 +90,14 @@ char connectNetwork(int networkAvailable)
           connect_AP(WiFi.SSID(network), HOME_PW);
           return 1;
        }
+       
+    
+       if(strstr(WiFi.SSID(network),  JX_AP))
+       {
+          connect_AP(WiFi.SSID(network), JX_PW);
+          return 1;
+       }
+       
        
        /*
        if(strstr(WiFi.SSID(network),  NUS_AP))
@@ -195,15 +206,19 @@ void mDNS_Setup()
     uint16_t port = PORT;  // HTTP Port
     uint32_t TTL = 1800; // Update every 30 min
     uint32_t OPTION = 0x01; // Service should be unique.
-   
+    unsigned char retLen = 12;
+    unsigned char retText[12] = "laser-robot";
     
-    retVal = sl_NetAppStart(SL_NET_APP_MDNS_ID);
+  
+    sl_NetAppSet (SL_NET_APP_DEVICE_CONFIG_ID, NETAPP_SET_GET_DEV_CONF_OPT_DEVICE_URN, retLen, retText); // set device name as laser-robot => laser-robot.local
+    
+    retVal = sl_NetAppStart(SL_NET_APP_MDNS_ID); // start MDNS 
     
     Serial.print("ret value is :");
     Serial.println(retVal);
     
-    sl_NetAppMDNSUnRegisterService(serviceName, nameLen);                
-    retVal = sl_NetAppMDNSRegisterService(serviceName, nameLen, serviceText, textLen, port, TTL, OPTION);
+    sl_NetAppMDNSUnRegisterService(serviceName, nameLen);   // Unregister previous services first to overwrite..             
+    retVal = sl_NetAppMDNSRegisterService(serviceName, nameLen, serviceText, textLen, port, TTL, OPTION); // register service.
   
     Serial.print("ret value is :");
     Serial.println(retVal);   
@@ -215,7 +230,7 @@ void setup()
   
     wifi_Setup();
     mDNS_Setup();
-    
+        
     stop(); // stop from moving
 }
 
@@ -233,39 +248,18 @@ void loop()
       if (client.available()) 
       {                                    
           char c = client.read();           // read a byte from connected client..
+          
+          Serial.print(c);
+          
           if (c == '\n') 
           {                                // if the byte is a newline character
-                                          // if th  e current line is blank, it signify the end of the client HTTP request, so send a response:
+                                          // if the current line is blank, it signify the end of the client HTTP request, so send a response:
           if (strlen(buffer) == 0) 
           {
-            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
-            // and a content-type so the client knows what's coming, then a blank line:
-            client.println("HTTP/1.1 200 OK ");
-            client.println("Content-type:text/html");
-            client.println();
-                        
-//          client.println("<html><head><title>LASER</title></head><body>LAB</body></html>");
-
-            client.println("<html><head><title>Laser Robot Control</title></head><body align=center>");
-            client.println("<h1 align=center><font color=\"red\">Laser MicroRobot WiFi Test</font></h1>");
             
-           
-            client.println("<p align=center><font size =\"5 px\"><font color=\"blue\">Servo Control</font></p>");
-            
-            client.println("<b1 style=\"margin-left: 4px\"><button onclick=\"location.href='/U'\">UP</button></b1><br><br>");
-            client.print("<button onclick=\"location.href='/L'\">LEFT</button>");
-            client.print("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/S'\">STOP</button>");
-         
-            client.println("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/R'\">RIGHT</button></b1><br><br>");
-            client.println("<b1 style=\"margin-left: 3px\"><button onclick=\"location.href='/D'\">DOWN</b1></button>");
-            
-
-
-            
-            // The HTTP response ends with 2 blank line:
-            client.println();
-            client.println();
-  
+            displayWebpage(client); // send HTML code for client browser to display
+            Serial.println("Web displayed");
+ 
             // break out of the while loop:
             break;
           }
@@ -283,6 +277,8 @@ void loop()
         // Check to see client request
         if (endsWith(buffer, "GET /U")) 
         {  
+                     Serial.println("Forw displayed");
+ 
           driveForward();
         }
         if (endsWith(buffer, "GET /D")) 
@@ -310,6 +306,37 @@ void loop()
   }
 }
 
+void displayWebpage(WiFiClient client)
+{
+  
+            // HTTP headers always start with a response code (e.g. HTTP/1.1 200 OK)
+            // and a content-type so the client knows what's coming, then a blank line:
+            client.println("HTTP/1.1 200 OK ");
+            client.println("Content-type:text/html");
+            client.println();
+                        
+//          client.println("<html><head><title>LASER</title></head><body>LAB</body></html>");
+
+            client.println("<html><head><title>Laser Robot Control</title></head><body align=center>");
+            client.println("<h1 align=center><font color=\"red\">Laser MicroRobot WiFi Test</font></h1>");
+            
+           
+            client.println("<p align=center><font size =\"5 px\"><font color=\"blue\">Servo Control</font></p>");
+            
+            client.println("<b1 style=\"margin-left: 4px\"><button onclick=\"location.href='/U'\">UP</button></b1><br><br>");
+            client.print("<button onclick=\"location.href='/L'\">LEFT</button>");
+            client.print("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/S'\">STOP</button>");
+         
+            client.println("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/R'\">RIGHT</button></b1><br><br>");
+            client.println("<b1 style=\"margin-left: 3px\"><button onclick=\"location.href='/D'\">DOWN</b1></button>");
+            
+
+
+            
+            // The HTTP response ends with 2 blank line:
+            client.println();
+            client.println();
+}
 
 //String compare 
 boolean endsWith(char* inString, char* compString) 
