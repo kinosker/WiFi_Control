@@ -27,8 +27,8 @@
 
 #define HOME_AP "Tiensoon"
 #define HOME_PW "0000000000"
-#define JX_AP  "Winnie_2G"
-#define JX_PW "tiantiankaixin"
+#define EXT_AP  "Toh"
+#define EXT_PW "0967237482"
 #define PHONE_AP "Tien Long"
 #define PHONE_PW "bendanben"
 #define NUS_AP "NUS"
@@ -92,9 +92,9 @@ char connectNetwork(int networkAvailable)
        }
        
     
-       if(strstr(WiFi.SSID(network),  JX_AP))
+       if(strstr(WiFi.SSID(network),  EXT_AP))
        {
-          connect_AP(WiFi.SSID(network), JX_PW);
+          connect_AP(WiFi.SSID(network), EXT_PW);
           return 1;
        }
        
@@ -222,6 +222,15 @@ void mDNS_Setup()
   
     Serial.print("ret value is :");
     Serial.println(retVal);   
+    
+   // unsigned char Len = 60;
+   // unsigned char Text[60] = "laser-robot";
+    
+    
+   //Serial.print("Web: ");
+
+   //sl_NetAppGet(SL_NET_APP_DEVICE_CONFIG_ID, NETAPP_SET_GET_DEV_CONF_OPT_DOMAIN_NAME, &Len, Text);
+   //Serial.println((char*)Text);
 }
 
 
@@ -253,6 +262,7 @@ void loop()
           
           if (c == '\n') 
           {                                // if the byte is a newline character
+            Serial.println("\n\nDetected\n\n");
                                           // if the current line is blank, it signify the end of the client HTTP request, so send a response:
           if (strlen(buffer) == 0) 
           {
@@ -409,4 +419,61 @@ void start()
     leftDrive.attach(leftServo);  // attach left servo
     rightDrive.attach(rightServo);  // attach right servo
 }
+
+
+// not tested... try at nus?
+int beginWPAEnterprise(char* ssid, char *passphrase, char *username)
+{
+
+    //
+    // Set IP address configuration to DHCP if needed
+    //
+    bool init_success = WiFiClass::init();
+    if (!init_success) {
+        return WL_CONNECT_FAILED;
+    }
+
+    WiFi.setIpDefaults();
+
+    //
+    //initialize the simplelink driver and make sure it was a success
+    //
+    sl_WlanPolicySet(SL_POLICY_CONNECTION , SL_CONNECTION_POLICY(1,1,0,0,0), 0, 0);
+
+    //
+    //get name length and set security type to WPA
+    //add passphrase and keylength to security parameters
+    //
+    int NameLen = strlen(ssid);
+    SlSecParams_t SecParams = {0};
+    SecParams.Type = SL_SEC_TYPE_WPA_ENT;
+    SecParams.Key = (signed char *)passphrase;
+    SecParams.KeyLen = strlen(passphrase);
+    
+    SlSecParamsExt_t eapParams = {0};
+    eapParams.EapMethod = SL_ENT_EAP_METHOD_PEAP0_MSCHAPv2;
+    eapParams.User = (signed char *)username;
+    eapParams.UserLen = strlen(username);
+    eapParams.AnonUserLen = 0;
+    
+    //
+    //connect to the access point (non enterprise, so 5th argument is NULL)
+    //also mac address parameters set as null (3rd argument)
+    //
+    int iRet = sl_WlanConnect((signed char *)ssid, NameLen, NULL, &SecParams, &eapParams);
+
+    //
+    //return appropriate status as described by arduino wifi library
+    //the WiFiClass:WiFi_status is handled by the WlanEvenHandler
+    //in SimpleLinkCallbacks.cpp. However, if iRet < 0, there was an error
+    //
+    if (iRet == 0) {
+        sl_WlanProfileAdd((signed char *)ssid, NameLen, 0, &SecParams, &eapParams, 6, 0);
+        return WiFi.status();
+    } else {
+        return WL_CONNECT_FAILED;
+    }
+}
+
+
 
