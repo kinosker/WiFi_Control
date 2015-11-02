@@ -17,6 +17,14 @@
 
 
 
+#define INIT 0
+#define LEFT    1
+#define RIGHT   2
+#define UP      3
+#define DOWN    4
+#define STOP    5
+
+
 
 #define rightServo 6
 #define leftServo 5
@@ -35,12 +43,19 @@
 #define PORT 80
 
 
+#define KEY_PRESSED 0
+#define INITIAL 1
+
+
 
 
 WiFiServer server(PORT); // port 80..
 
 Servo leftDrive;  // create servo object to control a servo
 Servo rightDrive; //another servo object for the left side
+volatile uint8_t browserState = INITIAL; // determine if it is a new browser..
+uint8_t direction = INIT; // determine the direction of the robot
+uint8_t prevDirection = INIT; // determine the direction of the robot
 
 
 unsigned int n;
@@ -214,14 +229,26 @@ void mDNS_Setup()
     
     retVal = sl_NetAppStart(SL_NET_APP_MDNS_ID); // start MDNS 
     
-    Serial.print("ret value is :");
-    Serial.println(retVal);
+    if(retVal != -6)
+    {
+      Serial.println("Mdns Failed to Start");
+      return;
+    }
     
     sl_NetAppMDNSUnRegisterService(serviceName, nameLen);   // Unregister previous services first to overwrite..             
     retVal = sl_NetAppMDNSRegisterService(serviceName, nameLen, serviceText, textLen, port, TTL, OPTION); // register service.
   
-    Serial.print("ret value is :");
-    Serial.println(retVal);   
+    
+    if(retVal == 0)
+    {
+      Serial.println("Mdns Started Successfully");
+    }
+    else
+    {
+      Serial.println("Mdns Registration Failed");
+    }
+    
+    
     
    // unsigned char Len = 60;
    // unsigned char Text[60] = "laser-robot";
@@ -246,32 +273,40 @@ void setup()
 
 void loop()
 {
+  
   int i = 0;
   WiFiClient client = server.available();   // listen for incoming clients
-
+  
+  
   if (client) 
   {                                         // if there is a client,
     char buffer[150] = {0};                 // make a buffer to hold incoming data
+    
     while (client.connected()) 
     {                                       // loop while the client's connected
       if (client.available()) 
       {                                    
           char c = client.read();           // read a byte from connected client..
           
-          Serial.print(c);
-          
           if (c == '\n') 
           {                                // if the byte is a newline character
-            Serial.println("\n\nDetected\n\n");
                                           // if the current line is blank, it signify the end of the client HTTP request, so send a response:
           if (strlen(buffer) == 0) 
           {
-            
-            displayWebpage(client); // send HTML code for client browser to display
-            Serial.println("Web displayed");
- 
-            // break out of the while loop:
-            break;
+            if(browserState == INITIAL)
+            {
+              displayWebpage(client); // send HTML code for client browser to display
+              //Serial.println("Web displayed");
+              // break out of the while loop:
+              break;
+            }
+            else
+            {
+              remainAtWebpage(client); // send HTML response 204 (Remain at web)
+              //Serial.println("Remain @ Web");
+              browserState = INITIAL;
+              break; // break out of the while loop
+            }
           }
           else 
           {                              // if you got a newline, then clear the buffer:
@@ -287,26 +322,34 @@ void loop()
         // Check to see client request
         if (endsWith(buffer, "GET /U")) 
         {  
-                     Serial.println("Forw displayed");
- 
+          browserState = KEY_PRESSED;
           driveForward();
         }
+        
         if (endsWith(buffer, "GET /D")) 
         {  
+          browserState = KEY_PRESSED;
           driveBackward();
         }
+        
         if (endsWith(buffer, "GET /L"))
         {  
+          browserState = KEY_PRESSED;
           turnLeft();
         }
+        
         if (endsWith(buffer, "GET /R")) 
         {  
+          browserState = KEY_PRESSED;
           turnRight();
         }
+        
         if (endsWith(buffer, "GET /S")) 
         {  
+          browserState = KEY_PRESSED;
           stop();
         }
+        
         
       }
     }
@@ -314,6 +357,15 @@ void loop()
     // close the connection:
     client.stop();
   }
+}
+
+
+void remainAtWebpage(WiFiClient client)
+{
+           client.println("HTTP/1.1 204 OK ");
+           // The HTTP response ends with 2 blank line:
+           client.println();
+           client.println();  
 }
 
 void displayWebpage(WiFiClient client)
@@ -335,17 +387,84 @@ void displayWebpage(WiFiClient client)
             
             client.println("<b1 style=\"margin-left: 4px\"><button onclick=\"location.href='/U'\">UP</button></b1><br><br>");
             client.print("<button onclick=\"location.href='/L'\">LEFT</button>");
-            client.print("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/S'\">STOP</button>");
+            client.print("<b1 style=\"margin-left: 60px\"><button onclick=\"location.href='/S'\">STOP</button>");
          
             client.println("<b1 style=\"margin-left: 50px\"><button onclick=\"location.href='/R'\">RIGHT</button></b1><br><br>");
             client.println("<b1 style=\"margin-left: 3px\"><button onclick=\"location.href='/D'\">DOWN</b1></button>");
             
-
+            printScript(client);
 
             
             // The HTTP response ends with 2 blank line:
             client.println();
             client.println();
+}
+
+void printScript(WiFiClient client)
+{
+  client.println("<script>");
+  
+
+  
+  // Start KEY DOWN EVEN
+  client.println("document.onkeydown = function(e) {");
+  client.println("switch (e.keyCode) {");
+  
+  client.println("case 37:");
+  //client.println("alert('left');");
+  client.println("window.location.href ='/L'");
+  client.println("break;");
+
+  client.println("case 38:");
+  //client.println("alert('up');");
+  client.println("window.location.href ='/U'");
+  client.println("break;");
+
+  client.println("case 39:");
+  //client.println("alert('right');");
+  client.println("window.location.href ='/R'");
+  client.println("break;");
+
+  client.println("case 40:");
+  //client.println("alert('down');");
+  client.println("window.location.href ='/D'");
+  client.println("break;");
+  
+  client.println("}");
+  client.println("};");
+  // END KEY DOWN EVENT
+
+
+ // Start KEY UP EVEN
+  client.println("document.onkeyup = function(f) {");
+  client.println("switch (f.keyCode) {");
+  
+  client.println("case 37:");
+  client.println("window.location.href ='/S'");
+  client.println("break;");
+  
+  client.println("case 38:");
+  client.println("window.location.href ='/S'");
+  client.println("break;");
+  
+  
+  client.println("case 39:");
+  client.println("window.location.href ='/S'");
+  client.println("break;");
+  
+  client.println("case 40:");
+  client.println("window.location.href ='/S'");
+  client.println("break;");
+  
+  client.println("}");
+  client.println("};");
+  // END KEY UP EVENT
+
+  
+
+  client.println("</script>");
+  client.println("</html>");
+
 }
 
 //String compare 
@@ -374,25 +493,44 @@ boolean endsWith(char* inString, char* compString)
 //turns left about 90 degrees
 void turnLeft()
 {
-  start();
-  leftDrive.write(0);
-  rightDrive.write(0);
+  if(direction != LEFT)
+  {
+    start();
+    leftDrive.write(0);
+    rightDrive.write(0);
+    direction = LEFT;
+    
+    Serial.println("Left");
+  }
+
 }
 
 //turns right about 90 degrees
 void turnRight()
 {
-  start();
-  leftDrive.write(180);
-  rightDrive.write(180);
+  if(direction != RIGHT)
+  {
+    start();
+    leftDrive.write(180);
+    rightDrive.write(180);
+    direction = RIGHT;
+    
+    Serial.println("Right");
+  }
 }
 
 
 //turns left about 90 degrees
 void stop()
 {
-  leftDrive.detach();
-  rightDrive.detach();
+  if(direction != STOP)
+  {
+    leftDrive.detach();
+    rightDrive.detach();
+    direction = STOP;
+    
+    Serial.println("Stop");
+  }
 }
 
 
@@ -400,17 +538,30 @@ void stop()
 //drives straight for 1 second
 void driveForward()
 {
-  start();
-  leftDrive.write(180);
-  rightDrive.write(0);
+  if(direction != UP)
+  {
+    start();
+    leftDrive.write(180);
+    rightDrive.write(0);
+    direction = UP;
+    
+    Serial.println("Forward");
+  }
 }
 
 //drives straight backward for 1 second
 void driveBackward()
 {
-  start();
-  leftDrive.write(0);
-  rightDrive.write(180);
+  if(direction != DOWN)
+  {
+    start();
+    leftDrive.write(0);
+    rightDrive.write(180);
+    direction = DOWN;
+    
+    
+    Serial.println("Backward");
+  }
 }
 
 
